@@ -5,6 +5,8 @@ import tensorflow as tf
 import network
 import guided_filter
 from tqdm import tqdm
+tf.compat.v1.disable_eager_execution()
+
 
 
 
@@ -23,20 +25,21 @@ def resize_crop(image):
     
 
 def cartoonize(load_folder, save_folder, model_path):
-    input_photo = tf.placeholder(tf.float32, [1, None, None, 3])
+    print("model_path",model_path)
+    input_photo = tf.compat.v1.placeholder(tf.float32, [1, None, None, 3])
     network_out = network.unet_generator(input_photo)
     final_out = guided_filter.guided_filter(input_photo, network_out, r=1, eps=5e-3)
 
-    all_vars = tf.trainable_variables()
+    all_vars = tf.compat.v1.trainable_variables()
     gene_vars = [var for var in all_vars if 'generator' in var.name]
-    saver = tf.train.Saver(var_list=gene_vars)
+    saver = tf.compat.v1.train.Saver(var_list=gene_vars)
     
-    config = tf.ConfigProto()
+    config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
-    sess = tf.Session(config=config)
+    sess = tf.compat.v1.Session(config=config)
 
-    sess.run(tf.global_variables_initializer())
-    saver.restore(sess, tf.train.latest_checkpoint(model_path))
+    sess.run(tf.compat.v1.global_variables_initializer())
+    saver.restore(sess, tf.compat.v1.train.latest_checkpoint(model_path))
     name_list = os.listdir(load_folder)
     for name in tqdm(name_list):
         try:

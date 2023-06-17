@@ -69,7 +69,7 @@ if __name__ == '__main__':
     import cv2
     from tqdm import tqdm
 
-    input_photo = tf.placeholder(tf.float32, [1, None, None, 3])
+    input_photo = tf.compat.v1.placeholder(tf.float32, [1, None, None, 3])
     #input_superpixel = tf.placeholder(tf.float32, [16, 256, 256, 3])
     output = guided_filter(input_photo, input_photo, 5, eps=1)
     image = cv2.imread('output_figure1/cartoon2.jpg')
