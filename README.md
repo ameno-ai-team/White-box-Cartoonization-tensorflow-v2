@@ -26,7 +26,7 @@
 
 ### People
 <img src="images/person1.jpg" width="1000px"/>
-<img src="images/person2.jpg" width="1000px"/>
+
 
 ### More Images Are Shown In The Supplementary Materials
 
@@ -50,8 +50,8 @@
 ### Installation
 
 - Assume you already have NVIDIA GPU and CUDA CuDNN installed 
-- Install tensorflow-gpu, we tested 1.12.0 and 1.13.0rc0 
-- Install scikit-image==0.14.5, other versions may cause problems
+- Install tensorflow, we tested  on v2 
+- Install scikit-image
 
 
 ### Inference with Pre-trained Model
