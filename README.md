@@ -5,6 +5,8 @@
 `python3 hf.py --input images --output images_output`
 
 ## Further training with more cartoon styles and upgrade to Tensorflow 2.0
+- Raw dataset is in raw
+- Dataset is in dataset folder. There are 2 sub-folders: cartoon_face and photo_face
 `python3 train_v2.py --continue_from ../test_code/saved_models --save_dir train_cartoon`
 
 
