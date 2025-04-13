@@ -7,7 +7,22 @@ Source code for 'Learning to Cartoonize Using White-Box Cartoon Representations'
 import layers
 import tensorflow as tf
 import numpy as np
-import tensorflow.contrib.slim as slim
+import tensorflow_addons as tfa
+
+# Create slim-like interface
+class slim:
+    @staticmethod
+    def convolution2d(inputs, out_channel, kernel_size, activation_fn=None, scope=None):
+        return tf.keras.layers.Conv2D(
+            out_channel, kernel_size, padding='same',
+            activation=activation_fn, name=scope
+        )(inputs)
+
+    @staticmethod
+    def fully_connected(inputs, out_channel, activation_fn=None, scope=None):
+        return tf.keras.layers.Dense(
+            out_channel, activation=activation_fn, name=scope
+        )(inputs)
 
 from tqdm import tqdm
 
@@ -15,7 +30,8 @@ from tqdm import tqdm
 
 def resblock(inputs, out_channel=32, name='resblock'):
     
-    with tf.variable_scope(name):
+        # TF 2.x compatible scope
+    with tf.name_scope(name):
         
         x = slim.convolution2d(inputs, out_channel, [3, 3], 
                                activation_fn=None, scope='conv1')
@@ -28,7 +44,8 @@ def resblock(inputs, out_channel=32, name='resblock'):
 
 
 def generator(inputs, channel=32, num_blocks=4, name='generator', reuse=False):
-    with tf.variable_scope(name, reuse=reuse):
+        # TF 2.x compatible scope
+    with tf.name_scope(name):
         
         x = slim.convolution2d(inputs, channel, [7, 7], activation_fn=None)
         x = tf.nn.leaky_relu(x)
@@ -60,7 +77,8 @@ def generator(inputs, channel=32, num_blocks=4, name='generator', reuse=False):
     
 
 def unet_generator(inputs, channel=32, num_blocks=4, name='generator', reuse=False):
-    with tf.variable_scope(name, reuse=reuse):
+        # TF 2.x compatible scope
+    with tf.name_scope(name):
         
         x0 = slim.convolution2d(inputs, channel, [7, 7], activation_fn=None)
         x0 = tf.nn.leaky_relu(x0)
@@ -101,7 +119,8 @@ def unet_generator(inputs, channel=32, num_blocks=4, name='generator', reuse=Fal
 def disc_bn(x, scale=1, channel=32, is_training=True, 
             name='discriminator', patch=True, reuse=False):
     
-    with tf.variable_scope(name, reuse=reuse):
+        # TF 2.x compatible scope
+    with tf.name_scope(name):
         
         for idx in range(3):
             x = slim.convolution2d(x, channel*2**idx, [3, 3], stride=2, activation_fn=None)
@@ -124,7 +143,8 @@ def disc_bn(x, scale=1, channel=32, is_training=True,
 
 
 def disc_sn(x, scale=1, channel=32, patch=True, name='discriminator', reuse=False):
-    with tf.variable_scope(name, reuse=reuse):
+        # TF 2.x compatible scope
+    with tf.name_scope(name):
 
         for idx in range(3):
             x = layers.conv_spectral_norm(x, channel*2**idx, [3, 3], 
@@ -147,7 +167,8 @@ def disc_sn(x, scale=1, channel=32, patch=True, name='discriminator', reuse=Fals
 
 
 def disc_ln(x, channel=32, is_training=True, name='discriminator', patch=True, reuse=False):
-    with tf.variable_scope(name, reuse=reuse):
+        # TF 2.x compatible scope
+    with tf.name_scope(name):
 
         for idx in range(3):
             x = slim.convolution2d(x, channel*2**idx, [3, 3], stride=2, activation_fn=None)

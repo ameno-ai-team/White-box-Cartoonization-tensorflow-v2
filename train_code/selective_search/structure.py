@@ -2,7 +2,7 @@ import numpy as np
 from skimage.segmentation import find_boundaries
 from skimage.segmentation import felzenszwalb
 from scipy.ndimage import find_objects
-import measure
+from . import measure
 
 
 class HierarchicalGrouping(object):

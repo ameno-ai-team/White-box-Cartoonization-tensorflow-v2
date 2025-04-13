@@ -6,20 +6,23 @@ by Xinrui Wang and Jinze yu
 
 
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
+import tensorflow_addons as tfa
 
 import utils
 import os
 import numpy as np
 import argparse
 import network 
-import loss
-
 from tqdm import tqdm
 from guided_filter import guided_filter
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+# Enable memory growth to avoid memory allocation issues
+physical_devices = tf.config.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
+# Enable mixed precision for better performance
+tf.keras.mixed_precision.set_global_policy('mixed_float16')
 
 def arg_parser():
     parser = argparse.ArgumentParser()
@@ -30,6 +33,8 @@ def arg_parser():
     parser.add_argument("--gpu_fraction", default = 0.5, type = float)
     parser.add_argument("--save_dir", default = 'train_cartoon', type = str)
     parser.add_argument("--use_enhance", default = False)
+    parser.add_argument("--continue_from", default = None, type = str, 
+                        help = "Path to checkpoint directory to continue training from")
 
     args = parser.parse_args()
     
@@ -40,12 +45,9 @@ def arg_parser():
 def train(args):
     
 
-    input_photo = tf.placeholder(tf.float32, [args.batch_size, 
-                                args.patch_size, args.patch_size, 3])
-    input_superpixel = tf.placeholder(tf.float32, [args.batch_size, 
-                                args.patch_size, args.patch_size, 3])
-    input_cartoon = tf.placeholder(tf.float32, [args.batch_size, 
-                                args.patch_size, args.patch_size, 3])
+    input_photo = tf.keras.Input(shape=[args.patch_size, args.patch_size, 3], batch_size=args.batch_size)
+    input_superpixel = tf.keras.Input(shape=[args.patch_size, args.patch_size, 3], batch_size=args.batch_size)
+    input_cartoon = tf.keras.Input(shape=[args.patch_size, args.patch_size, 3], batch_size=args.batch_size)
     
     output = network.unet_generator(input_photo)
     output = guided_filter(input_photo, output, r=1)
@@ -103,9 +105,26 @@ def train(args):
                                         .minimize(d_loss_total, var_list=disc_vars)
            
     '''
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    sess = tf.Session(config=config)
+    # Using tf.function for better performance
+    @tf.function
+    def train_step(photo_batch, cartoon_batch, superpixel_batch):
+        with tf.GradientTape() as g_tape, tf.GradientTape() as d_tape:
+            # Generator forward pass
+            inter_out = generator(photo_batch, training=True)
+            
+            # Calculate losses
+            g_loss = g_loss_total(photo_batch, superpixel_batch, cartoon_batch, inter_out)
+            d_loss = d_loss_total(photo_batch, superpixel_batch, cartoon_batch, inter_out)
+            
+        # Calculate gradients
+        g_gradients = g_tape.gradient(g_loss, generator.trainable_variables)
+        d_gradients = d_tape.gradient(d_loss, discriminator.trainable_variables)
+        
+        # Apply gradients
+        g_optimizer.apply_gradients(zip(g_gradients, generator.trainable_variables))
+        d_optimizer.apply_gradients(zip(d_gradients, discriminator.trainable_variables))
+        
+        return g_loss, d_loss
     '''
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=args.gpu_fraction)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -118,7 +137,21 @@ def train(args):
     with tf.device('/device:GPU:0'):
 
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, tf.train.latest_checkpoint('pretrain/saved_models'))
+        
+        # Load checkpoint based on continue_from argument
+        if args.continue_from:
+            checkpoint_path = args.continue_from
+            print(f'Continuing training from checkpoint: {checkpoint_path}')
+        else:
+            checkpoint_path = 'pretrain/saved_models'
+            print('Starting new training from pretrained model')
+            
+        checkpoint = tf.train.latest_checkpoint(checkpoint_path)
+        if checkpoint:
+            print(f'Loading checkpoint: {checkpoint}')
+            saver.restore(sess, checkpoint)
+        else:
+            print(f'No checkpoint found in {checkpoint_path}')
 
         face_photo_dir = 'dataset/photo_face'
         face_photo_list = utils.load_image_list(face_photo_dir)

@@ -8,8 +8,8 @@ by Xinrui Wang and Jinze yu
 from scipy.ndimage import filters
 from skimage import segmentation, color
 from joblib import Parallel, delayed
-from selective_search.util import switch_color_space
-from selective_search.structure import HierarchicalGrouping
+import selective_search.util as ss_util
+import selective_search.structure as ss_structure
 
 import os
 import cv2
@@ -106,18 +106,34 @@ def selective_adacolor(batch_image, seg_num=200, power=1):
 
 
 
+@tf.function
 def simple_superpixel(batch_image, seg_num=200):
+    '''
+    TensorFlow-compatible superpixel method using average pooling for simplification.
+    '''
+    # Convert to float32 if needed
+    batch_image = tf.cast(batch_image, tf.float32)
     
-    def process_slic(image):
-        seg_label = segmentation.slic(image, n_segments=seg_num, sigma=1,
-                                        compactness=10, convert2lab=True)
-        image = color.label2rgb(seg_label, image, kind='mix')
-        return image
+    # Use fixed pool size based on typical image dimensions and segment count
+    # For 256x256 image with 200 segments, this gives roughly 16x16 segments
+    pool_size = 16
     
-    num_job = np.shape(batch_image)[0]
-    batch_out = Parallel(n_jobs=num_job)(delayed(process_slic)\
-                         (image) for image in batch_image)
-    return np.array(batch_out)
+    # Apply average pooling
+    pooled = tf.nn.avg_pool2d(
+        batch_image,
+        ksize=[1, pool_size, pool_size, 1],
+        strides=[1, pool_size, pool_size, 1],
+        padding='SAME'
+    )
+    
+    # Resize back to original size using nearest neighbor to maintain sharp edges
+    output = tf.image.resize(
+        pooled,
+        tf.shape(batch_image)[1:3],
+        method=tf.image.ResizeMethod.NEAREST_NEIGHBOR
+    )
+    
+    return output
 
 
 
@@ -130,16 +146,16 @@ def load_image_list(data_dir):
 
 
 def next_batch(filename_list, batch_size):
-    idx = np.arange(0 , len(filename_list))
+    # Ensure batch_size does not exceed the length of filename_list
+    batch_size = min(batch_size, len(filename_list))
+    idx = np.arange(0, len(filename_list))
     np.random.shuffle(idx)
     idx = idx[:batch_size]
     batch_data = []
     for i in range(batch_size):
         image = cv2.imread(filename_list[idx[i]])
-        image = image.astype(np.float32)/127.5 - 1
-        #image = image.astype(np.float32)/255.0
+        image = image.astype(np.float32) / 127.5 - 1
         batch_data.append(image)
-            
     return np.asarray(batch_data)
 
 

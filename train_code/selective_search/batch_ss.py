@@ -8,8 +8,8 @@ import numpy as np
 from adaptive_color import label2rgb
 from joblib import Parallel, delayed
 from skimage.segmentation import felzenszwalb
-from util import switch_color_space
-from structure import HierarchicalGrouping
+from .util import oversegmentation, switch_color_space, load_strategy
+from .structure import HierarchicalGrouping
 
 
 def color_ss_map(image, color_space='Lab', k=10, 
