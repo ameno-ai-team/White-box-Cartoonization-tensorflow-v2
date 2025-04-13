@@ -1,3 +1,13 @@
+# This fork is to 
+## Simple inference with hf.py which allows folder and video conversion.
+
+`python3 hf.py --input walk.mp4 --output walk_o.mp4` <br>
+`python3 hf.py --input images --output images_output`
+
+## Further training with more cartoon styles and upgrade to Tensorflow 2.0
+`python3 train_v2.py --continue_from ../test_code/saved_models --save_dir train_cartoon`
+
+
 <img src='paper/shinjuku.jpg' align="left" width=1000>
 
 <br><br><br>
